@@ -1,3 +1,9 @@
+/* MADE BY AI:
+1. Gemini 3.8 Flash (High)
+2. Claude Sonnet 4.6 (Thinking)
+3. Claude Opus 4.6 Thinking
+4. GPT OSS 120B (Medium) */
+
 /**
  * MIKROTIK REST API WEB DASHBOARD
  * Core UI Logic, Realtime Chart.js, Polling, Form Handlers & Glassmorphism UX
