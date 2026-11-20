@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>MikroTik REST API Dashboard</title>
+  
+  <!-- Google Fonts: Cinzel (Classic), Rajdhani & Inter (Sci-Fi / UI), JetBrains Mono (Telemetry) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons CDN with SVG fallbacks -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <!-- Custom Glassmorphism CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="light-theme hologram-theme">
+  <!-- Sci-Fi Tactical Grid & Holographic Scanline Overlay -->
+  <div class="scifi-grid-overlay"></div>
+  <div class="scifi-scanline"></div>
+
+  <!-- Glowing Background Ambient Spheres (Holographic Light Prismatic) -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+  <div class="ambient-glow glow-4"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- ==================== VIEW 1: LOGIN PAGE ==================== -->
+  <section id="view-login" class="view-section active">
+    <div class="login-wrapper">
+      <div class="glass-card login-card">
+        <div class="login-header">
+          <div class="brand-icon">
+            <i class="fa-solid fa-network-wired"></i>
+          </div>
+          <h2>MikroTik Dashboard</h2>
+          <p class="subtitle">RouterOS v7 REST API Controller</p>
+        </div>
+
+        <form id="login-form" class="glass-form" onsubmit="handleLogin(event)">
+          <div class="form-group">
+            <label for="login-host"><i class="fa-solid fa-server"></i> IP Router / Host</label>
+            <input type="text" id="login-host" class="glass-input" placeholder="contoh: 192.168.88.1" value="192.168.88.1" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group flex-1">
+              <label for="login-port"><i class="fa-solid fa-hashtag"></i> Port REST API</label>
+              <input type="number" id="login-port" class="glass-input" placeholder="443 / 80" value="443" required>
+            </div>
+            <div class="form-group flex-1">
+              <label for="login-ssl"><i class="fa-solid fa-shield-halved"></i> Protokol</label>
+              <div class="toggle-wrapper">
+                <input type="checkbox" id="login-ssl" class="toggle-checkbox" checked onchange="handleSslToggle()">
+                <label for="login-ssl" class="toggle-label" id="ssl-label-text">HTTPS (SSL)</label>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="login-username"><i class="fa-solid fa-user"></i> Username</label>
+            <input type="text" id="login-username" class="glass-input" placeholder="admin" value="admin" required>
+          </div>
+
+          <div class="form-group">
+            <label for="login-password"><i class="fa-solid fa-key"></i> Password</label>
+            <div class="password-input-wrapper">
+              <input type="password" id="login-password" class="glass-input" placeholder="Kosongkan jika default">
+              <button type="button" class="btn-toggle-pw" onclick="togglePasswordVisibility('login-password')">
+                <i class="fa-regular fa-eye" id="eye-icon"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="form-group demo-switch-box">
+            <div class="toggle-wrapper">
+              <input type="checkbox" id="login-demo" class="toggle-checkbox">
+              <label for="login-demo" class="toggle-label font-bold text-cyan">
+                <i class="fa-solid fa-laptop-code"></i> Mode Simulasi / Demo Lab
+              </label>
+            </div>
+            <p class="help-text">Centang jika router fisik belum terhubung untuk simulasi pengujian & presentasi TR</p>
+          </div>
+
+          <button type="submit" id="btn-login-submit" class="glass-btn btn-primary btn-block">
+            <span class="btn-text"><i class="fa-solid fa-arrow-right-to-bracket"></i> Masuk Dashboard</span>
+            <span class="btn-loader spinner hidden"></span>
+          </button>
+        </form>
+
+        <div class="login-footer">
+          <small>Tugas Rancang Dasar Pemrograman Jaringan &bull; REST API RouterOS v7</small>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==================== VIEW 2: MAIN APP LAYOUT ==================== -->
+  <section id="view-app" class="view-section hidden">
+    <!-- Top Modern Glass Navbar -->
+    <header class="glass-navbar">
+      <div class="navbar-left">
+        <button id="btn-toggle-sidebar" class="btn-icon mobile-only" onclick="toggleSidebar()">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+        <div class="brand">
+          <i class="fa-solid fa-network-wired brand-logo"></i>
+          <div>
+            <h1 class="brand-title" id="top-identity-name">MikroTik</h1>
+            <span class="brand-badge" id="top-model-name">RouterBoard</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="navbar-center hide-on-mobile">
+        <div class="live-status-pill">
+          <span class="pulse-dot"></span>
+          <span id="conn-status-text">Terhubung via REST API</span>
+          <span class="badge-version" id="top-ros-version">v7.x</span>
+        </div>
+      </div>
+
+      <div class="navbar-right">
+        <!-- Refresh Interval Selector -->
+        <div class="refresh-control hide-on-mobile">
+          <i class="fa-solid fa-rotate text-muted"></i>
+          <select id="select-refresh-rate" class="glass-select-sm" onchange="changeRefreshRate(this.value)">
+            <option value="2000">Refresh 2s</option>
+            <option value="5000" selected>Refresh 5s</option>
+            <option value="10000">Refresh 10s</option>
+            <option value="0">Jeda (Pause)</option>
+          </select>
+        </div>
+
+        <!-- Manual Refresh Button -->
+        <button class="glass-btn-icon" title="Refresh Sekarang" onclick="triggerManualRefresh()">
+          <i class="fa-solid fa-arrows-rotate" id="refresh-icon"></i>
+        </button>
+
+        <!-- User / Logout Dropdown -->
+        <button class="glass-btn-sm btn-logout" onclick="handleLogout()" title="Keluar">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span class="hide-on-mobile">Logout</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- App Body with Sidebar + Main Content -->
+    <div class="app-layout">
+      <!-- Translucent Glass Sidebar -->
+      <aside id="app-sidebar" class="glass-sidebar">
+        <nav class="sidebar-nav">
+          <div class="nav-section-title">NAVIGASI UTAMA</div>
+          <button class="nav-item active" data-tab="tab-dashboard" onclick="switchTab('tab-dashboard')">
+            <i class="fa-solid fa-gauge-high"></i>
+            <span>Dashboard</span>
+          </button>
+          <button class="nav-item" data-tab="tab-monitoring" onclick="switchTab('tab-monitoring')">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>Monitoring</span>
+          </button>
+          <button class="nav-item" data-tab="tab-config" onclick="switchTab('tab-config')">
+            <i class="fa-solid fa-sliders"></i>
+            <span>Konfigurasi</span>
+          </button>
+          <button class="nav-item" data-tab="tab-hotspot" onclick="switchTab('tab-hotspot')">
+            <i class="fa-solid fa-wifi"></i>
+            <span>Hotspot & WiFi</span>
+          </button>
+          
+          <div class="nav-section-title mt-4">INFORMASI ROUTER</div>
+          <div class="sidebar-info-card">
+            <div class="info-row">
+              <span class="text-muted">Host:</span>
+              <span class="font-mono text-cyan" id="side-host">192.168.88.1</span>
+            </div>
+            <div class="info-row">
+              <span class="text-muted">Uptime:</span>
+              <span class="font-mono" id="side-uptime">0s</span>
+            </div>
+            <div class="info-row">
+              <span class="text-muted">Mode:</span>
+              <span class="badge-mode" id="side-mode">REST API</span>
+            </div>
+          </div>
+        </nav>
+      </aside>
+
+      <!-- Main Content Area -->
+      <main class="main-content">
+        <!-- ==================== TAB 1: DASHBOARD ==================== -->
+        <div id="tab-dashboard" class="tab-pane active">
+          <!-- Top Stat Cards (4 Cards) -->
+          <div class="stat-grid">
+            <div class="glass-card stat-card">
+              <div class="stat-icon cpu-glow">
+                <i class="fa-solid fa-microchip"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">CPU Load</span>
+                <h3 class="stat-value" id="card-cpu-load">0%</h3>
+                <span class="stat-sub" id="card-cpu-info">1 Core @ 0MHz</span>
+              </div>
+              <div class="stat-progress-bar">
+                <div class="stat-progress-fill bg-cyan" id="bar-cpu" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card">
+              <div class="stat-icon ram-glow">
+                <i class="fa-solid fa-memory"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">RAM Usage</span>
+                <h3 class="stat-value" id="card-ram-percent">0%</h3>
+                <span class="stat-sub" id="card-ram-info">0 MB / 0 MB</span>
+              </div>
+              <div class="stat-progress-bar">
+                <div class="stat-progress-fill bg-purple" id="bar-ram" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card">
+              <div class="stat-icon hdd-glow">
+                <i class="fa-solid fa-hard-drive"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">Storage (HDD)</span>
+                <h3 class="stat-value" id="card-hdd-percent">0%</h3>
+                <span class="stat-sub" id="card-hdd-info">0 MB / 0 MB</span>
+              </div>
+              <div class="stat-progress-bar">
+                <div class="stat-progress-fill bg-emerald" id="bar-hdd" style="width: 0%"></div>
+              </div>
+            </div>
+
+            <div class="glass-card stat-card">
+              <div class="stat-icon iface-glow">
+                <i class="fa-solid fa-ethernet"></i>
+              </div>
+              <div class="stat-info">
+                <span class="stat-label">Interfaces</span>
+                <h3 class="stat-value" id="card-iface-active">0</h3>
+                <span class="stat-sub" id="card-iface-total">Total 0 Interface</span>
+              </div>
+              <div class="stat-meta">
+                <span class="badge-success" id="badge-dhcp-count">0 Leases</span>
+                <span class="badge-primary" id="badge-ip-count">0 IPs</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Middle Row: Live Traffic Graph & Hardware Info -->
+          <div class="dashboard-grid mt-4">
+            <!-- Real-time Traffic Graph Card -->
+            <div class="glass-card chart-card flex-2">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-chart-area text-cyan"></i> Real-time Traffic Bandwidth</h3>
+                  <p class="card-subtitle">Pemantauan transmisi data (Rx & Tx) secara langsung</p>
+                </div>
+                <div class="card-header-actions">
+                  <select id="select-traffic-interface" class="glass-select-sm" onchange="changeTrafficInterface(this.value)">
+                    <option value="all">Semua Interface</option>
+                  </select>
+                </div>
+              </div>
+              <div class="chart-container">
+                <canvas id="trafficChart"></canvas>
+              </div>
+            </div>
+
+            <!-- System Hardware Specs Card -->
+            <div class="glass-card info-card flex-1">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-server text-purple"></i> Spesifikasi Router</h3>
+              </div>
+              <div class="spec-list">
+                <div class="spec-item">
+                  <span class="spec-label"><i class="fa-solid fa-id-card"></i> Identity</span>
+                  <span class="spec-val font-mono font-bold text-cyan" id="spec-identity">-</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label"><i class="fa-solid fa-box"></i> Model</span>
+                  <span class="spec-val" id="spec-model">-</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label"><i class="fa-solid fa-barcode"></i> Serial Number</span>
+                  <span class="spec-val font-mono" id="spec-serial">-</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label"><i class="fa-solid fa-code-branch"></i> RouterOS Version</span>
+                  <span class="spec-val badge-cyan" id="spec-version">-</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label"><i class="fa-solid fa-clock"></i> System Uptime</span>
+                  <span class="spec-val font-mono" id="spec-uptime">-</span>
+                </div>
+                <div class="spec-item">
+                  <span class="spec-label"><i class="fa-solid fa-microchip"></i> Arsitektur CPU</span>
+                  <span class="spec-val" id="spec-cpu">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Row: Interfaces Quick Table -->
+          <div class="glass-card mt-4">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fa-solid fa-network-wired text-emerald"></i> Status Interface Jaringan</h3>
+              <button class="glass-btn-sm" onclick="switchTab('tab-config', 'cfg-iface')">
+                <i class="fa-solid fa-gear"></i> Kelola Interface
+              </button>
+            </div>
+            <div class="table-responsive">
+              <table class="glass-table">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Nama Interface</th>
+                    <th>Tipe</th>
+                    <th>MAC Address</th>
+                    <th>Rx Rate</th>
+                    <th>Tx Rate</th>
+                    <th>Total Rx / Tx</th>
+                    <th>Komentar</th>
+                  </tr>
+                </thead>
+                <tbody id="table-dashboard-interfaces">
+                  <tr>
+                    <td colspan="8" class="text-center text-muted">Memuat data interface...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 2: MONITORING ==================== -->
+        <div id="tab-monitoring" class="tab-pane">
+          <!-- Monitoring Subtabs -->
+          <div class="subnav-pills">
+            <button class="subnav-pill active" onclick="switchSubTab('mon-traffic')">
+              <i class="fa-solid fa-wave-square"></i> Traffic & Bandwidth
+            </button>
+            <button class="subnav-pill" onclick="switchSubTab('mon-resources')">
+              <i class="fa-solid fa-microchip"></i> CPU & Memory History
+            </button>
+            <button class="subnav-pill" onclick="switchSubTab('mon-connections')">
+              <i class="fa-solid fa-arrows-split-up-and-left"></i> Active Connections
+            </button>
+            <button class="subnav-pill" onclick="switchSubTab('mon-leases')">
+              <i class="fa-solid fa-laptop-code"></i> DHCP Leases Monitor
+            </button>
+            <button class="subnav-pill" onclick="switchSubTab('mon-logs')">
+              <i class="fa-solid fa-list-ul"></i> Router System Logs
+            </button>
+          </div>
+
+          <!-- Subtab 1: Traffic Monitor Detail -->
+          <div id="mon-traffic" class="subtab-pane active">
+            <div class="glass-card mb-4">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-chart-line text-cyan"></i> Realtime Interface Bandwidth Gauges</h3>
+                <span class="text-muted">Live update setiap interval</span>
+              </div>
+              <div id="interface-gauge-grid" class="gauge-grid">
+                <!-- Dynamically populated interface traffic cards -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Subtab 2: CPU & Memory History Chart -->
+          <div id="mon-resources" class="subtab-pane">
+            <div class="glass-card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-microchip text-purple"></i> Riwayat Utilisasi CPU & RAM</h3>
+                <span class="text-muted">Grafik tren beban sistem 30 tick terakhir</span>
+              </div>
+              <div class="chart-container large">
+                <canvas id="resourceChart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subtab 3: Active Connections Monitor -->
+          <div id="mon-connections" class="subtab-pane">
+            <div class="glass-card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-arrows-split-up-and-left text-emerald"></i> Tabel Koneksi Aktif (Firewall Connections)</h3>
+                  <p class="card-subtitle">Koneksi TCP, UDP, dan ICMP yang sedang melewati router</p>
+                </div>
+                <div class="card-header-actions">
+                  <input type="text" id="conn-search" class="glass-input-sm" placeholder="Cari IP / Port..." oninput="filterTable('table-connections', this.value)">
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table" id="table-connections">
+                  <thead>
+                    <tr>
+                      <th>Protokol</th>
+                      <th>Source Address</th>
+                      <th>Destination Address</th>
+                      <th>State TCP</th>
+                      <th>Timeout</th>
+                      <th>Bytes</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-connections">
+                    <tr>
+                      <td colspan="6" class="text-center text-muted">Memuat koneksi...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subtab 4: DHCP Leases Monitor -->
+          <div id="mon-leases" class="subtab-pane">
+            <div class="glass-card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-network-wired text-cyan"></i> Klien DHCP Terhubung (Active Leases)</h3>
+                  <p class="card-subtitle">Daftar perangkat yang menerima alokasi IP otomatis dari MikroTik</p>
+                </div>
+                <button class="glass-btn-sm" onclick="openModal('modal-add-lease')">
+                  <i class="fa-solid fa-plus"></i> Tambah Static Lease
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>IP Address</th>
+                      <th>MAC Address</th>
+                      <th>Host Name</th>
+                      <th>DHCP Server</th>
+                      <th>Tipe</th>
+                      <th>Komentar</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-dhcp-leases">
+                    <tr>
+                      <td colspan="8" class="text-center text-muted">Memuat leases...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subtab 5: Router System Logs -->
+          <div id="mon-logs" class="subtab-pane">
+            <div class="glass-card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-terminal text-cyan"></i> MikroTik System Logs</h3>
+                  <p class="card-subtitle">Log aktivitas sistem, DHCP, firewall, dan login</p>
+                </div>
+                <div class="card-header-actions">
+                  <input type="text" id="log-search" class="glass-input-sm" placeholder="Filter log..." oninput="filterLogs(this.value)">
+                  <button class="glass-btn-sm" onclick="fetchLogs()"><i class="fa-solid fa-arrows-rotate"></i></button>
+                </div>
+              </div>
+              <div class="log-stream-container" id="log-stream-box">
+                <!-- Log entries dynamic -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 3: KONFIGURASI ==================== -->
+        <div id="tab-config" class="tab-pane">
+          <!-- Configuration Subtabs -->
+          <div class="subnav-pills">
+            <button class="subnav-pill active" onclick="switchConfigTab('cfg-ip')">
+              <i class="fa-solid fa-map-location-dot"></i> IP Address
+            </button>
+            <button class="subnav-pill" onclick="switchConfigTab('cfg-iface')">
+              <i class="fa-solid fa-network-wired"></i> Interfaces
+            </button>
+            <button class="subnav-pill" onclick="switchConfigTab('cfg-dhcp')">
+              <i class="fa-solid fa-server"></i> DHCP & IP Pool
+            </button>
+            <button class="subnav-pill" onclick="switchConfigTab('cfg-dns')">
+              <i class="fa-solid fa-globe"></i> DNS Settings
+            </button>
+            <button class="subnav-pill" onclick="switchConfigTab('cfg-firewall')">
+              <i class="fa-solid fa-shield-halved"></i> Firewall Filter & NAT
+            </button>
+            <button class="subnav-pill" onclick="switchConfigTab('cfg-system')">
+              <i class="fa-solid fa-gear"></i> System & Reboot
+            </button>
+          </div>
+
+          <!-- Config 1: IP Address Manager -->
+          <div id="cfg-ip" class="config-pane active">
+            <div class="glass-card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-map-location-dot text-cyan"></i> Manajemen IP Address</h3>
+                  <p class="card-subtitle">Konfigurasi alamat IP pada setiap interface MikroTik</p>
+                </div>
+                <button class="glass-btn-sm btn-primary" onclick="openModal('modal-add-ip')">
+                  <i class="fa-solid fa-plus"></i> Tambah IP Address
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>IP Address / Subnet</th>
+                      <th>Network</th>
+                      <th>Interface</th>
+                      <th>Komentar</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-config-ip">
+                    <tr>
+                      <td colspan="6" class="text-center text-muted">Memuat IP Address...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Config 2: Interface Manager -->
+          <div id="cfg-iface" class="config-pane">
+            <div class="glass-card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-network-wired text-purple"></i> Kontrol Interface</h3>
+                  <p class="card-subtitle">Aktifkan atau nonaktifkan port interface</p>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Status</th>
+                      <th>Nama</th>
+                      <th>Tipe</th>
+                      <th>MAC Address</th>
+                      <th>MTU</th>
+                      <th>Komentar</th>
+                      <th>Aksi Saklar</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-config-iface">
+                    <tr>
+                      <td colspan="7" class="text-center text-muted">Memuat data...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Config 3: DHCP Server & Pools -->
+          <div id="cfg-dhcp" class="config-pane">
+            <div class="grid-2col">
+              <div class="glass-card">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-server text-cyan"></i> DHCP Server</h3>
+                </div>
+                <div class="table-responsive">
+                  <table class="glass-table">
+                    <thead>
+                      <tr>
+                        <th>Nama</th>
+                        <th>Interface</th>
+                        <th>Address Pool</th>
+                        <th>Lease Time</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-config-dhcp-servers">
+                      <tr><td colspan="4" class="text-center text-muted">Memuat...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="glass-card">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-layer-group text-emerald"></i> IP Pool Ranges</h3>
+                  <button class="glass-btn-sm" onclick="openModal('modal-add-pool')">
+                    <i class="fa-solid fa-plus"></i> Tambah Pool
+                  </button>
+                </div>
+                <div class="table-responsive">
+                  <table class="glass-table">
+                    <thead>
+                      <tr>
+                        <th>Nama Pool</th>
+                        <th>Rentang IP (Ranges)</th>
+                        <th>Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody id="tbody-config-ip-pools">
+                      <tr><td colspan="3" class="text-center text-muted">Memuat...</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Config 4: DNS Settings -->
+          <div id="cfg-dns" class="config-pane">
+            <div class="glass-card max-w-xl mx-auto">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-globe text-cyan"></i> Konfigurasi DNS Server</h3>
+              </div>
+              <form id="form-dns" class="glass-form" onsubmit="handleUpdateDns(event)">
+                <div class="form-group">
+                  <label for="dns-servers"><i class="fa-solid fa-server"></i> DNS Servers (Pisahkan dengan koma)</label>
+                  <input type="text" id="dns-servers" class="glass-input" placeholder="contoh: 1.1.1.1, 8.8.8.8">
+                  <small class="help-text">Gunakan DNS publik seperti Cloudflare (1.1.1.1) atau Google (8.8.8.8)</small>
+                </div>
+
+                <div class="form-group">
+                  <label for="dns-dynamic" class="text-muted"><i class="fa-solid fa-satellite-dish"></i> Dynamic Servers (dari ISP / DHCP Client)</label>
+                  <input type="text" id="dns-dynamic" class="glass-input" readonly disabled>
+                </div>
+
+                <div class="form-group">
+                  <div class="toggle-wrapper">
+                    <input type="checkbox" id="dns-allow-remote" class="toggle-checkbox" checked>
+                    <label for="dns-allow-remote" class="toggle-label">Allow Remote Requests (Router bertindak sebagai DNS Cache)</label>
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="stat-badge flex-1">
+                    <span class="text-muted">Cache Size:</span> <span id="dns-cache-size" class="font-mono">-</span>
+                  </div>
+                  <div class="stat-badge flex-1">
+                    <span class="text-muted">Cache Used:</span> <span id="dns-cache-used" class="font-mono">-</span>
+                  </div>
+                </div>
+
+                <button type="submit" class="glass-btn btn-primary mt-4">
+                  <i class="fa-solid fa-floppy-disk"></i> Simpan Pengaturan DNS
+                </button>
+              </form>
+            </div>
+          </div>
+
+          <!-- Config 5: Firewall Filter & NAT -->
+          <div id="cfg-firewall" class="config-pane">
+            <!-- Filter Rules Card -->
+            <div class="glass-card mb-4">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-shield-halved text-cyan"></i> Firewall Filter Rules</h3>
+                  <p class="card-subtitle">Aturan penyaringan paket (Input, Forward, Output)</p>
+                </div>
+                <button class="glass-btn-sm btn-primary" onclick="openModal('modal-add-filter')">
+                  <i class="fa-solid fa-plus"></i> Tambah Filter Rule
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Chain</th>
+                      <th>Action</th>
+                      <th>Protokol</th>
+                      <th>Dst. Port</th>
+                      <th>Bytes / Packets</th>
+                      <th>Komentar</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-firewall-filters">
+                    <tr><td colspan="7" class="text-center text-muted">Memuat filter rules...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- NAT Rules Card -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-right-left text-purple"></i> Firewall NAT Rules</h3>
+                  <p class="card-subtitle">Network Address Translation (Masquerade, Dst-NAT / Port Forwarding)</p>
+                </div>
+                <button class="glass-btn-sm btn-primary" onclick="openModal('modal-add-nat')">
+                  <i class="fa-solid fa-plus"></i> Tambah NAT Rule
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Chain</th>
+                      <th>Action</th>
+                      <th>Out. Interface</th>
+                      <th>To Addresses</th>
+                      <th>Bytes</th>
+                      <th>Komentar</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-firewall-nats">
+                    <tr><td colspan="7" class="text-center text-muted">Memuat NAT rules...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- Config 6: System & Reboot -->
+          <div id="cfg-system" class="config-pane">
+            <div class="grid-2col">
+              <!-- Router Identity -->
+              <div class="glass-card">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-signature text-cyan"></i> Nama Identity Router</h3>
+                </div>
+                <form id="form-identity" class="glass-form" onsubmit="handleUpdateIdentity(event)">
+                  <div class="form-group">
+                    <label for="input-router-identity">Nama Hostname / Router</label>
+                    <input type="text" id="input-router-identity" class="glass-input" required>
+                  </div>
+                  <button type="submit" class="glass-btn btn-primary">
+                    <i class="fa-solid fa-check"></i> Ubah Identity
+                  </button>
+                </form>
+              </div>
+
+              <!-- Power Controls -->
+              <div class="glass-card">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-power-off text-rose"></i> Kontrol Daya Router</h3>
+                </div>
+                <p class="text-muted mb-4">Gunakan perintah ini secara hati-hati untuk merestart Router MikroTik.</p>
+                <div class="action-buttons-stack">
+                  <button class="glass-btn btn-danger" onclick="confirmReboot()">
+                    <i class="fa-solid fa-rotate-right"></i> Restart / Reboot Router
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ==================== TAB 4: HOTSPOT & USERS ==================== -->
+        <div id="tab-hotspot" class="tab-pane">
+          <div class="grid-2col">
+            <!-- Active Hotspot Users -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-users text-cyan"></i> Pengguna Hotspot Aktif</h3>
+                  <p class="card-subtitle">User yang sedang login saat ini</p>
+                </div>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>User</th>
+                      <th>IP Address</th>
+                      <th>MAC Address</th>
+                      <th>Uptime</th>
+                      <th>Bytes In/Out</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-hotspot-active">
+                    <tr><td colspan="5" class="text-center text-muted">Memuat data hotspot...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Hotspot User Database -->
+            <div class="glass-card">
+              <div class="card-header">
+                <div>
+                  <h3 class="card-title"><i class="fa-solid fa-id-badge text-purple"></i> Daftar Akun Hotspot</h3>
+                  <p class="card-subtitle">Database pengguna voucher/akun</p>
+                </div>
+                <button class="glass-btn-sm btn-primary" onclick="openModal('modal-add-hotspot-user')">
+                  <i class="fa-solid fa-user-plus"></i> Tambah User
+                </button>
+              </div>
+              <div class="table-responsive">
+                <table class="glass-table">
+                  <thead>
+                    <tr>
+                      <th>Username</th>
+                      <th>Profile</th>
+                      <th>Komentar</th>
+                      <th>Bytes Terpakai</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-hotspot-users">
+                    <tr><td colspan="5" class="text-center text-muted">Memuat user database...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Mobile Bottom Navigation Bar (Smartphones) -->
+    <nav class="mobile-bottom-nav mobile-only">
+      <button class="mob-nav-item active" data-tab="tab-dashboard" onclick="switchTab('tab-dashboard')">
+        <i class="fa-solid fa-gauge-high"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="mob-nav-item" data-tab="tab-monitoring" onclick="switchTab('tab-monitoring')">
+        <i class="fa-solid fa-chart-line"></i>
+        <span>Monitor</span>
+      </button>
+      <button class="mob-nav-item" data-tab="tab-config" onclick="switchTab('tab-config')">
+        <i class="fa-solid fa-sliders"></i>
+        <span>Config</span>
+      </button>
+      <button class="mob-nav-item" data-tab="tab-hotspot" onclick="switchTab('tab-hotspot')">
+        <i class="fa-solid fa-wifi"></i>
+        <span>Hotspot</span>
+      </button>
+    </nav>
+  </section>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- Modal: Tambah IP Address -->
+  <div id="modal-add-ip" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-plus text-cyan"></i> Tambah IP Address Baru</h3>
+        <button class="btn-close" onclick="closeModal('modal-add-ip')">&times;</button>
+      </div>
+      <form id="form-add-ip" class="glass-form" onsubmit="submitAddIp(event)">
+        <div class="form-group">
+          <label for="ip-address-input">IP Address / Subnet</label>
+          <input type="text" id="ip-address-input" class="glass-input" placeholder="contoh: 192.168.10.1/24" required>
+        </div>
+        <div class="form-group">
+          <label for="ip-interface-select">Interface Target</label>
+          <select id="ip-interface-select" class="glass-select" required>
+            <!-- Diisi dinamis -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="ip-comment-input">Komentar (Opsional)</label>
+          <input type="text" id="ip-comment-input" class="glass-input" placeholder="contoh: IP LAN Kantor">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-add-ip')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-save"></i> Simpan IP</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Tambah Static Lease DHCP -->
+  <div id="modal-add-lease" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-plus text-cyan"></i> Tambah Static DHCP Lease</h3>
+        <button class="btn-close" onclick="closeModal('modal-add-lease')">&times;</button>
+      </div>
+      <form id="form-add-lease" class="glass-form" onsubmit="submitAddLease(event)">
+        <div class="form-group">
+          <label for="lease-ip-input">IP Address Tetap</label>
+          <input type="text" id="lease-ip-input" class="glass-input" placeholder="contoh: 10.10.10.50" required>
+        </div>
+        <div class="form-group">
+          <label for="lease-mac-input">MAC Address Perangkat</label>
+          <input type="text" id="lease-mac-input" class="glass-input" placeholder="contoh: AA:BB:CC:DD:EE:FF" required>
+        </div>
+        <div class="form-group">
+          <label for="lease-comment-input">Komentar / Nama Perangkat</label>
+          <input type="text" id="lease-comment-input" class="glass-input" placeholder="contoh: Printer Server Lab">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-add-lease')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-save"></i> Simpan Lease</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Tambah IP Pool -->
+  <div id="modal-add-pool" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-plus text-emerald"></i> Tambah IP Pool Baru</h3>
+        <button class="btn-close" onclick="closeModal('modal-add-pool')">&times;</button>
+      </div>
+      <form id="form-add-pool" class="glass-form" onsubmit="submitAddPool(event)">
+        <div class="form-group">
+          <label for="pool-name-input">Nama Pool</label>
+          <input type="text" id="pool-name-input" class="glass-input" placeholder="contoh: pool-lab-baru" required>
+        </div>
+        <div class="form-group">
+          <label for="pool-ranges-input">Rentang IP (Ranges)</label>
+          <input type="text" id="pool-ranges-input" class="glass-input" placeholder="contoh: 192.168.20.10-192.168.20.100" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-add-pool')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-save"></i> Tambah Pool</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Tambah Firewall Filter Rule -->
+  <div id="modal-add-filter" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-shield-halved text-cyan"></i> Tambah Firewall Filter Rule</h3>
+        <button class="btn-close" onclick="closeModal('modal-add-filter')">&times;</button>
+      </div>
+      <form id="form-add-filter" class="glass-form" onsubmit="submitAddFilter(event)">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="filter-chain-select">Chain</label>
+            <select id="filter-chain-select" class="glass-select">
+              <option value="input">input</option>
+              <option value="forward" selected>forward</option>
+              <option value="output">output</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="filter-action-select">Action</label>
+            <select id="filter-action-select" class="glass-select">
+              <option value="accept">accept</option>
+              <option value="drop">drop</option>
+              <option value="reject">reject</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="filter-proto-select">Protocol (Opsional)</label>
+            <select id="filter-proto-select" class="glass-select">
+              <option value="">(Semua)</option>
+              <option value="tcp">tcp</option>
+              <option value="udp">udp</option>
+              <option value="icmp">icmp</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="filter-port-input">Dst. Port (Opsional)</label>
+            <input type="text" id="filter-port-input" class="glass-input" placeholder="contoh: 80,443">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="filter-comment-input">Komentar</label>
+          <input type="text" id="filter-comment-input" class="glass-input" placeholder="contoh: Block port mencurigakan">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-add-filter')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-save"></i> Buat Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Tambah Firewall NAT Rule -->
+  <div id="modal-add-nat" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-right-left text-purple"></i> Tambah NAT Rule</h3>
+        <button class="btn-close" onclick="closeModal('modal-add-nat')">&times;</button>
+      </div>
+      <form id="form-add-nat" class="glass-form" onsubmit="submitAddNat(event)">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="nat-chain-select">Chain</label>
+            <select id="nat-chain-select" class="glass-select">
+              <option value="srcnat" selected>srcnat</option>
+              <option value="dstnat">dstnat</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="nat-action-select">Action</label>
+            <select id="nat-action-select" class="glass-select">
+              <option value="masquerade" selected>masquerade</option>
+              <option value="dst-nat">dst-nat</option>
+              <option value="redirect">redirect</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="nat-outiface-select">Out. Interface (Opsional)</label>
+          <select id="nat-outiface-select" class="glass-select">
+            <option value="">(Semua Interface)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="nat-toaddr-input">To Addresses (Jika dst-nat)</label>
+          <input type="text" id="nat-toaddr-input" class="glass-input" placeholder="contoh: 192.168.10.50">
+        </div>
+        <div class="form-group">
+          <label for="nat-comment-input">Komentar</label>
+          <input type="text" id="nat-comment-input" class="glass-input" placeholder="contoh: NAT Masquerade Internet">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-add-nat')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-save"></i> Buat Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Tambah User Hotspot -->
+  <div id="modal-add-hotspot-user" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-plus text-purple"></i> Tambah Pengguna Hotspot</h3>
+        <button class="btn-close" onclick="closeModal('modal-add-hotspot-user')">&times;</button>
+      </div>
+      <form id="form-add-hotspot-user" class="glass-form" onsubmit="submitAddHotspotUser(event)">
+        <div class="form-group">
+          <label for="hs-username">Username</label>
+          <input type="text" id="hs-username" class="glass-input" placeholder="contoh: mahasiswa02" required>
+        </div>
+        <div class="form-group">
+          <label for="hs-password">Password</label>
+          <input type="password" id="hs-password" class="glass-input" placeholder="Password akun" required>
+        </div>
+        <div class="form-group">
+          <label for="hs-profile">Profile</label>
+          <input type="text" id="hs-profile" class="glass-input" value="default" placeholder="default / 2mbps / unlimited">
+        </div>
+        <div class="form-group">
+          <label for="hs-comment">Komentar</label>
+          <input type="text" id="hs-comment" class="glass-input" placeholder="contoh: Akun Ujian TR">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-add-hotspot-user')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-save"></i> Simpan User</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit IP Address -->
+  <div id="modal-edit-ip" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square text-cyan"></i> Edit IP Address</h3>
+        <button class="btn-close" onclick="closeModal('modal-edit-ip')">&times;</button>
+      </div>
+      <form id="form-edit-ip" class="glass-form" onsubmit="submitEditIp(event)">
+        <input type="hidden" id="edit-ip-id">
+        <div class="form-group">
+          <label for="edit-ip-address">IP Address / Subnet</label>
+          <input type="text" id="edit-ip-address" class="glass-input" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-ip-interface">Interface Target</label>
+          <select id="edit-ip-interface" class="glass-select" required>
+            <!-- Diisi dinamis -->
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-ip-comment">Komentar</label>
+          <input type="text" id="edit-ip-comment" class="glass-input">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-edit-ip')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-check"></i> Perbarui IP</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit DHCP Lease -->
+  <div id="modal-edit-lease" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square text-cyan"></i> Edit DHCP Lease</h3>
+        <button class="btn-close" onclick="closeModal('modal-edit-lease')">&times;</button>
+      </div>
+      <form id="form-edit-lease" class="glass-form" onsubmit="submitEditLease(event)">
+        <input type="hidden" id="edit-lease-id">
+        <div class="form-group">
+          <label for="edit-lease-ip">IP Address</label>
+          <input type="text" id="edit-lease-ip" class="glass-input" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-lease-mac">MAC Address</label>
+          <input type="text" id="edit-lease-mac" class="glass-input" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-lease-comment">Komentar</label>
+          <input type="text" id="edit-lease-comment" class="glass-input">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-edit-lease')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-check"></i> Perbarui Lease</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit IP Pool -->
+  <div id="modal-edit-pool" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square text-emerald"></i> Edit IP Pool</h3>
+        <button class="btn-close" onclick="closeModal('modal-edit-pool')">&times;</button>
+      </div>
+      <form id="form-edit-pool" class="glass-form" onsubmit="submitEditPool(event)">
+        <input type="hidden" id="edit-pool-id">
+        <div class="form-group">
+          <label for="edit-pool-name">Nama Pool</label>
+          <input type="text" id="edit-pool-name" class="glass-input" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-pool-ranges">Rentang IP (Ranges)</label>
+          <input type="text" id="edit-pool-ranges" class="glass-input" required>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-edit-pool')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-check"></i> Perbarui Pool</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit Filter Rule -->
+  <div id="modal-edit-filter" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square text-cyan"></i> Edit Filter Rule</h3>
+        <button class="btn-close" onclick="closeModal('modal-edit-filter')">&times;</button>
+      </div>
+      <form id="form-edit-filter" class="glass-form" onsubmit="submitEditFilter(event)">
+        <input type="hidden" id="edit-filter-id">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="edit-filter-chain">Chain</label>
+            <select id="edit-filter-chain" class="glass-select">
+              <option value="input">input</option>
+              <option value="forward">forward</option>
+              <option value="output">output</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="edit-filter-action">Action</label>
+            <select id="edit-filter-action" class="glass-select">
+              <option value="accept">accept</option>
+              <option value="drop">drop</option>
+              <option value="reject">reject</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="edit-filter-proto">Protocol</label>
+            <select id="edit-filter-proto" class="glass-select">
+              <option value="">(Semua)</option>
+              <option value="tcp">tcp</option>
+              <option value="udp">udp</option>
+              <option value="icmp">icmp</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="edit-filter-port">Dst. Port</label>
+            <input type="text" id="edit-filter-port" class="glass-input">
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-filter-comment">Komentar</label>
+          <input type="text" id="edit-filter-comment" class="glass-input">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-edit-filter')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-check"></i> Perbarui Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit NAT Rule -->
+  <div id="modal-edit-nat" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-pen-to-square text-purple"></i> Edit NAT Rule</h3>
+        <button class="btn-close" onclick="closeModal('modal-edit-nat')">&times;</button>
+      </div>
+      <form id="form-edit-nat" class="glass-form" onsubmit="submitEditNat(event)">
+        <input type="hidden" id="edit-nat-id">
+        <div class="form-row">
+          <div class="form-group flex-1">
+            <label for="edit-nat-chain">Chain</label>
+            <select id="edit-nat-chain" class="glass-select">
+              <option value="srcnat">srcnat</option>
+              <option value="dstnat">dstnat</option>
+            </select>
+          </div>
+          <div class="form-group flex-1">
+            <label for="edit-nat-action">Action</label>
+            <select id="edit-nat-action" class="glass-select">
+              <option value="masquerade">masquerade</option>
+              <option value="dst-nat">dst-nat</option>
+              <option value="redirect">redirect</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="edit-nat-outiface">Out. Interface</label>
+          <select id="edit-nat-outiface" class="glass-select">
+            <option value="">(Semua Interface)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-nat-toaddr">To Addresses</label>
+          <input type="text" id="edit-nat-toaddr" class="glass-input">
+        </div>
+        <div class="form-group">
+          <label for="edit-nat-comment">Komentar</label>
+          <input type="text" id="edit-nat-comment" class="glass-input">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-edit-nat')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-check"></i> Perbarui Rule</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Edit User Hotspot -->
+  <div id="modal-edit-hotspot-user" class="modal-overlay hidden">
+    <div class="glass-card modal-card">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-user-pen text-purple"></i> Edit Pengguna Hotspot</h3>
+        <button class="btn-close" onclick="closeModal('modal-edit-hotspot-user')">&times;</button>
+      </div>
+      <form id="form-edit-hotspot-user" class="glass-form" onsubmit="submitEditHotspotUser(event)">
+        <input type="hidden" id="edit-hs-id">
+        <div class="form-group">
+          <label for="edit-hs-username">Username</label>
+          <input type="text" id="edit-hs-username" class="glass-input" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-hs-password">Password Baru (Kosongkan jika tidak diubah)</label>
+          <input type="password" id="edit-hs-password" class="glass-input" placeholder="Password baru">
+        </div>
+        <div class="form-group">
+          <label for="edit-hs-profile">Profile</label>
+          <input type="text" id="edit-hs-profile" class="glass-input" value="default">
+        </div>
+        <div class="form-group">
+          <label for="edit-hs-comment">Komentar</label>
+          <input type="text" id="edit-hs-comment" class="glass-input">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="glass-btn btn-secondary" onclick="closeModal('modal-edit-hotspot-user')">Batal</button>
+          <button type="submit" class="glass-btn btn-primary"><i class="fa-solid fa-check"></i> Simpan Perubahan</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Custom Scripts -->
+  <script src="/static/js/api.js"></script>
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
