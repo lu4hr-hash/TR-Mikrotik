@@ -1,8 +1,8 @@
-<!-- MADE BY AI: -->
-<!-- 1. Gemini 3.8 Flash (High) -->
-<!-- 2. Claude Sonnet 4.6 (Thinking) -->
-<!-- 3. Claude Opus 4.6 Thinking -->
-<!-- 4. GPT OSS 120B (Medium) -->
+MADE BY AI:
+1. Gemini 3.8 Flash (High)
+2. Claude Sonnet 4.6 (Thinking)
+3. Claude Opus 4.6 Thinking
+4. GPT OSS 120B (Medium)
 
 # MikroTik REST API Web Dashboard
 
